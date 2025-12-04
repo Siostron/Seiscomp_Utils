@@ -51,7 +51,7 @@ echo "Epicenter location (on GoogleMaps): " >> text.lst
 awk '{if ($1=="Latitude") {lat=$2};if ($1=="Longitude") {lon=$2};} END {printf ("https://www.google.com/maps/search/%7.4f,%08.4f\n",lat,lon)}' text.lst >> text.lst
 
 echo "" >> text.lst
-echo -e  "\n  --- More Information: mruiz@geo3bcn.csic.es ----">> text.lst
+echo -e  "\n  --- More Information: labsis@geo3bcn.csic.es ----">> text.lst
 
 # preparo png mapa zona epicentral diferenciant 2 casos: Event Local o Event Regional-Tele
 # necesito el xml de l'event
@@ -74,7 +74,7 @@ scmapcut -E $ident --ep $ident.xml -m $m -d $d -o $ident.png
 # - A Finals de Desembre de 2023, el gmail  ja no deixa entra correus generats
 # amb postfix - mailutils - Nova Politica Anti-Spam.
 # Intento que surtin amb el smtpin.csic.es:587, sense massa exit.
-# mail -s 'New Event: '$ident'' -A $ident.png < text.lst mruizfernandez@gmail.com 
+# mail -s 'New Event: '$ident'' -A $ident.png < text.lst mruiz@gmail.com 
 
 # envio el text de localitzacio i la imatge via Telegram al telefon - Alternativa Gmail
 #telegram-send --file text.lst --caption "$ident"
@@ -92,7 +92,7 @@ telegram-send --file $ident.pdf --image $ident.png --caption "_Event:_ *$ident*"
 awk '{if ($1=="Latitude") {lat=$2};if ($1=="Longitude") {lon=$2};} END {printf ("https://www.google.com/maps/search/%7.4f,%08.4f\n",lat,lon)}' text.lst | telegram-send --stdin --disable-web-page-preview
 
 # mail sense mapa mail csic, aixi son menys pesats
-mail -s 'New Event: '$ident'' < text.lst mruiz@geo3bcn.csic.es, sarevalo@geo3bcn.csic.es
+mail -s 'New Event: '$ident'' < text.lst mruiz@geo3bcn.csic.es
 
 rm text.lst event.raw $ident.xml $ident.png $ident.pdf
 
