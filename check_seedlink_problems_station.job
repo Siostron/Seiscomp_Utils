@@ -1,0 +1,309 @@
+#!/bin/ksh
+
+#--------------------------------------------------------------------------------
+# MRF - 25/10/2018 - Script per controlar si alguna estacio deixa d'enviar dades 
+#       05/11/2019 - Seedlink. Avisa enviant un mails si l'estacio s'atura, 
+#                    s'endarrereix una mica, o comença a reenviar dades desde el
+#                    principi (Cas extrem d'endarreriment). 
+#                    Trec missatges per pantalla per a que quedin a un log.
+#       24/04/2025 - Petites modificaciones per adaptar al nou servidor amb
+#                    Ubuntu 24.04 LTS
+#       25/04/2025 - Faig que envii alerta per Telegram a part de correu.
+#                    Cal instalar Telegram-send i crear un bot - @SeedlinkAlert_bot
+#       05/05/2025 - Alguns cops el slinktool falla. Miro si el fitxer de sortida 
+#                    esta ple i si no, repeteixo amb un while.
+#--------------------------------------------------------------------------------
+
+if [[ $# != 2 ]];then
+   echo""
+   echo "Usage: check_seedlink.job NETWORK STATION"
+   echo "       check_seedlink.job CA ICJA"
+   echo ""
+   exit 1
+fi
+
+# Xarxa a controlar, entra com a variable - Filtro nomes una de les nostres, per 
+# excloure permanents o altres xarxes.
+net=$1
+estacio=$2
+cha=HHZ
+
+# El bucle s'executara eternament fins que t sigui diferent de cero.
+# En teoria mai, pero em guardo la posiblitat de fer para si cal en algun cas
+t=0
+
+# Particion a chequejar, no sigui que ompli el disc amb els logs. Si s'omple mes del permes avisa i para
+# el script --> t=1
+#
+partic="/dev/sda2"
+vol_ocup="85"
+
+# Creo un derectori on anar ficant tots els fitxers intermedis i els logs 
+if [ -d Trash ]; then
+   echo "Dir Trash already exists!"
+else
+   mkdir -v Trash
+fi
+
+if [ -d Trash/Check_Seedlink_$net ]; then
+   echo "Dir Trash/Check_Seedlink_$net already exists!"
+else
+   mkdir -v Trash/Check_Seedlink_$net
+fi
+
+# Treballo dins del directori
+cd Trash/Check_Seedlink_$net
+
+# Inicialitzo uns fitxers on escriure les estacions amb problemes, i creo el backup en blanc
+# per opoder fer la primera cpomparacio a l'inici del bucle.
+rm liststa_$net liststa_bck_$net CheckSeedlink_$net.log
+touch liststa_bck_$net
+
+# Destinataris dels mails d'avis
+MailsAvis="mruiz@geo3bcn.csic.es, labsiso@geo3bcn.csic.es"
+
+# Maxim delay/retard de les dades seedlink permes [Temps en Segons]
+Tdiff=600
+
+# Miro el delay del seedlink cada X segonds. Bucle infinit espaiat amb un sleep [Temps en Segons]
+time=300
+
+# Faig un contador per saber a quina volta estic
+count=0
+
+# - Coses a tenir en compte doncs no volem estar rebent infinits mails per a una estacio amb problemes
+#    - Si una de les estacions supera el delay, envia 1 mail i cap mes, potser si s'arregla una altre, 
+#      pero cal evitar que a cada volta del loop envii la mateixa advertencia per a la mateixa estacio.
+#      Amb algun contador no se quina estacio es/son, nomes el numero d'estacions. Si escric els noms de
+#      les estacions amb problemes en un fitxer i conto quantes linies hi ha al final del bucle, tinc
+#      el nombre total i el seu nom per a posar-les al mail.
+while [ $t -eq 0 ]
+do
+
+echo "$count + 1" | bc  | read count
+echo "Loop Number = $count" >> CheckSeedlink_$net.log
+
+# Amb slinktool genero una sortida ordenada simplificada de la xarxa a monitoritzar
+# sortida del tipus: YS CN01     HHZ D 2019/10/24 23:59:21.1900  -  2019/10/25 11:57:49.9800
+# slinktool -Q - print formatted stream list
+# slinktool -Q seiscomp.geo3bcn.csic.es:18000 | sort | awk '{if ($1 == "'$net'") print $0}' | grep $cha > text1_$net 
+# Els codis de LOC donen pel sac, Puleixo la sortida a: YS CN01 2019/10/31 00:05:43.7600  -  2019/10/31 11:29:25.9100
+#
+# Maig 2025 - Per algun motiu, en aquesta nova versio del slinktool a vegades falla: 
+#     error: sl_collect(): non-miniSEED packet received!?! Terminating.
+# i text1_$net queda en blanc destrotant l'algoritme i enviant mails erronis de Solucio Total de Problemes.
+#
+# Fico el slinktool dins d'un while del que no surto fins que es verifiqui que el fitxer esta ple, i sino repeteixo
+# cada 5 segons.
+
+  ttt=0
+  count2=0
+
+  while [ $ttt -eq 0 ]
+  do
+
+# Trec el dia i la hora per a que quedi al log.
+   date -u >> CheckSeedlink_$net.log
+
+# Per comparar utilitzo com a referencia el temps referenciat a segons de Gener 1970
+# utilizo flag -u UTC per que no tingui en compte el fus horari de la hora del PC ni estiu/hivern
+# ja que les dades seedlink venen en UTC
+# -u, --utc, --universal  print or set Coordinated Universal Time
+# +%s seconds since 1970-01-01 00:00:00 UTC
+   date -u +%s | read secondsnow
+
+   slinktool -Q geo3bcn-seiscomp.geo3bcn.csic.es:18000 | sort | awk '{if (($1 == "'$net'") && ($2 == "'$estacio'") && (substr($0,13,3)=="'$cha'")) print $1,$2,substr($0,19,53)}' > text1_$net
+
+# Maig 2025 - Verifico si text1_$net esta ple o no
+   if [[ -s text1_$net ]] ; then
+     ttt=1
+     echo "Count slinktool: $count2" >> CheckSeedlink_$net.log
+     echo "text1_$net has data." >> CheckSeedlink_$net.log
+# Guardo mes info al log per a fer debugg
+     echo " Sortida slinktool filtada per $net i $cha" >> CheckSeedlink_$net.log
+     cat text1_$net >> CheckSeedlink_$net.log
+     echo "-------------------------------------------------" >> CheckSeedlink_$net.log
+   else
+     ttt=0
+     echo "Count slinktool: $count2" >> CheckSeedlink_$net.log
+     echo "$count2 + 1" | bc  | read count2
+     echo "text1_$net is empty! Repetim!" >> CheckSeedlink_$net.log
+# Guardo mes info al log per a fer debugg
+     echo " Sortida slinktool filtada per $net i $cha" >> CheckSeedlink_$net.log
+     cat text1_$net >> CheckSeedlink_$net.log
+     echo "-------------------------------------------------" >> CheckSeedlink_$net.log
+     echo " Esperem 5 seg" >> CheckSeedlink_$net.log
+     sleep 5
+   fi ;
+  done
+
+# Miro quantes estacions hi ha a la sortida seedlink
+  wc -l text1_$net | read n caca1
+
+# Inicialitzo el fitxer d'estacions defectuoses, l'he esborrat al final del loop per a no 
+# anar acumulant, pero per a fer les comparacions necesito que existeixi, cas on no hi ha
+# cap estacio amb problemes, fitxer existeix pero no hi ha res. 
+  touch liststa_$net
+
+# Faig un loop per a totes les estacions i miro si alguna s'ha endarrerit mes tems que Tdiff
+  for ((l=1; l<=$n; l++))
+  do
+    awk '{if (NR=="'$l'") print $2,substr($6,1,4),substr($6,6,2),substr($6,9,2),$7}' text1_$net | read sta y m d h
+
+# Converteixo el temps del stream seedlink a segonds desde 1970 - UTC
+# utilizo flag UTC per que no tingui en compte el fus horari
+# date --date "2018-09-22T14:35:12.012345678 UTC" +%s    --> 1537626912
+    date --date "$y-$m-$d"T"$h UTC" +%s | read last_seconds
+
+# Calculo la direncia entre stream end_time i la hora d'ara
+    echo  "$secondsnow - $last_seconds" | bc | read diffSec
+
+# Miro si la diferencia es major al Delay fixat, escric el nom de l'estacio amb problemes
+# a un fitser contador. Miro en quin cas estic, comarant el fitxer actual amb el del loop
+# anterior i preparo el mail que correspongui.
+    if [ $diffSec -gt $Tdiff ]; then
+      echo " WARNING!! $sta Delay is: $diffSec s" >> CheckSeedlink_$net.log
+      echo "-> WARNING!! $sta Delay is: $diffSec s" >> text2_$net
+      echo "$sta" >> liststa_$net
+    else
+      echo " --> $sta Delay is OK: $diffSec s " >> CheckSeedlink_$net.log
+      echo "- $sta Delay is OK: $diffSec s " >> text2_$net
+    fi
+  done
+
+  wc -l liststa_$net | read ko caca2
+
+  diff liststa_$net liststa_bck_$net | awk '{if ($1 == "<") print $2}' | wc -l | read diff1
+  diff liststa_$net liststa_bck_$net | awk '{if ($1 == ">") print $2}' > diff_sta2_$net
+  wc -l diff_sta2_$net | read diff2 caca3
+
+  awk '{printf("[%s]",$0)}' liststa_$net | read subject1
+  awk '{printf("[%s]",$0)}' diff_sta2_$net | read subject2
+
+  echo  >> CheckSeedlink_$net.log
+  echo " $ko Stations with problems! ==> ($subject1) / $diff2 Solved <== ($subject2)"  >> CheckSeedlink_$net.log
+  echo " ----------------------------------------------------------------------"  >> CheckSeedlink_$net.log
+
+# Algoritme per a buscar canvis als fitxers liststa i liststa_bck, denotant estacions que s'espatllen
+# milloren. Espero no haver saltat cap cas vicios...
+#
+# 1) amb ko > 0: - Llista entrant te estacions amb problemes
+# 1.1) diff1 > 0 diff2 = 0 - Marca que entren estacions amb problemes - MAIL
+# 1.2) diff1 > 0 diff2 > 0 - Millora alguna estacio, pero empitjora una nova - MAIL
+#
+# 1.3) diff1 = 0 diff2 = 0 - No hi ha canvis / diferencies - les dolentes continuen igual - RES a fer
+# 1.4) diff1 = 0 diff2 > 0 - S'aregla una - MAIL millora
+#
+# 2) amb ko = 0: - Llista entrant buida, no hi ha estacions amb nous problemes
+# 2.1) diff1 = 0 diff2 = 0 - Tot be, cap estacio malament - RES a fer
+# 2.2) diff1 = 0 diff2 > 0 - S'aregla tot - MAIL millora
+# -> amb ko = 0  diff1 mai pot ser diferent de cero - En tot cas si pasa per aqi m'envio un mail
+# alertant que no he considerat algun cas!
+
+ 
+# Preparo el text del mail a enviar, el cos del correu es el mateix, canviare els subjects indicant estacions
+# amb problemes i/o arreglades.
+  echo -e "\nLoop Number = $count (one loop each $time s)\nMaximum allowed delay: $Tdiff s\n" > text3_$net
+  date -u >> text3_$net
+  echo -e "\n-> $ko Stations with Seedlink problems! ==> $subject1" >> text3_$net
+  echo -e "<- $diff2 Stations where Seedlink problems were solved <== $subject2 \n" >> text3_$net
+  echo " ----------------------------------------------------------------" >> text3_$net
+  paste text1_$net text2_$net | awk '{print $1,$2,$6,$7,$8,$9,$10,$11,$12,$13,$14}' >> text3_$net
+  echo -e " ---------------------------------------------------------------\n" >> text3_$net
+  echo -e "\n Perhaps labsis@geo3bcn.csic.es has more information ...\n Or perhaps not ..." >> text3_$net
+
+# Algoritme de seleccio de cada un dels casos propiament dit:
+
+  if [ $ko -ne 0 ]; then
+    if [ $diff1 -ne 0 ]; then
+      if [ $diff2 -eq 0 ]; then
+# Cas 1.1 - mail averia
+         echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+         echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+         echo " ---> Enviem Mail! " >> CheckSeedlink_$net.log
+         mail -s 'Warning '$net': '$ko' Seedlink problems! ('$subject1')' $MailsAvis < text3_$net
+         enscript  ./text3_$net -B -o - | ps2pdf - ./Alert_$net.pdf
+         telegram-send --file ./Alert_$net.pdf --caption "Warning $net: $ko Seedlink problems [$subject1]" --format markdown
+	 rm ./Alert_$net.pdf
+      else
+# Cas 1.2 - mail averia
+         echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+         echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+         echo " ---> Enviem Mail! " >> CheckSeedlink_$net.log
+         mail -s 'Warning '$net': '$ko' Seedlink problems ('$subject1') / '$diff2' Solved ('$subject2')' $MailsAvis < text3_$net
+         enscript  ./text3_$net -B -o - | ps2pdf - ./Alert_$net.pdf
+         telegram-send --file ./Alert_$net.pdf --caption "Warning $net: $ko Seedlink problems [$subject1] x $diff2 Solved [$subject2]" --format markdown
+	 rm ./Alert_$net.pdf
+      fi
+    else
+      if [ $diff2 -eq 0 ]; then
+# Cas 1.3 - res
+        echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+        echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+        echo "Nothing to do ! / Any change..." >> CheckSeedlink_$net.log
+      else
+# Cas 1.4 - mail millora
+         echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+         echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+         echo " ---> Enviem Mail! " >> CheckSeedlink_$net.log
+         mail -s 'Warning '$net': '$ko' Seedlink problems ('$subject1') / '$diff2' Solved ('$subject2')' $MailsAvis < text3_$net
+         enscript  ./text3_$net -B -o - | ps2pdf - ./Alert_$net.pdf
+         telegram-send --file ./Alert_$net.pdf --caption "Warning $net: $ko Seedlink problems [$subject1] x $diff2 Solved [$subject2]" --format markdown
+	 rm ./Alert_$net.pdf
+      fi
+    fi
+  else
+    if [ $diff1 -eq 0 ]; then
+      if [ $diff2 -eq 0 ]; then
+# Cas 2.1 - res
+        echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+        echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+        echo "Nothing to do ! / Everything is OK !" >> CheckSeedlink_$net.log
+      else
+# Cas 2.2 - mail millora
+        echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+        echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+        echo " ---> Enviem Mail! " >> CheckSeedlink_$net.log
+        mail -s 'Good News '$net': Everything Solved on ('$subject2') !' $MailsAvis < text3_$net
+        enscript  ./text3_$net -B -o - | ps2pdf - ./Alert_$net.pdf
+        telegram-send --file ./Alert_$net.pdf --caption "Good News $net: Everything Solved on [$subject2]" --format markdown
+	rm ./Alert_$net.pdf
+      fi
+    else
+# Alerta de que ni ha alguna casuistica no tinguda en compte a l'algoritme doncs diff1 > 0!
+      echo "ko = $ko / diff1 = $diff1 / diff2 = $diff2" >> CheckSeedlink_$net.log
+      echo "Bad: $subject1 / OK: $subject2" >> CheckSeedlink_$net.log
+      echo " Something is wrong in the algorithm ! - CHECK IT" >> CheckSeedlink_$net.log
+      mail -s 'Warning  '$net' - ATENCIO MARIO REVISAR ALGORITME diff1='$diff1' ' $MailsAvis < text3_$net
+    fi
+  fi
+
+  echo -e " ----------------------------------------------------------------------\n" >> CheckSeedlink_$net.log
+
+# Elimino fitxers intermediaris
+  rm text1_$net text2_$net text3_$net diff_sta2_$net
+
+# Moc la llista actual a un Backup per poder comparar a la seguent volta
+  mv liststa_$net liststa_bck_$net
+
+
+# Verifiquem l'estat del disc. Si la particio definida a $partic s'omple mes que un valor predeterminat $vol_ocup avisem 
+# als destinataris $MailsAvisos i parem el proceso (t=1).
+
+   df -h | awk '{if ($1=="'$partic'") print substr($5,1,(length($5)-1))}' | read porcient
+
+   if [[ $porcient -gt $vol_ocup ]]; then
+      echo -e "\n   - Atencion la particion $partic esta ya al $porcient % sobrepasando el umbral de $vol_ocup %\n\n Se va a parar inmediatamente el chequeo del seedlink para evitar el colapso del sistema.\n\n  --> Hacer espacio en el disco y volver a ejecutar el programa\n\n" | mail -s 'Atencion Parada de check_seedlink.job '$net' !! '  $MailsAvis
+
+# matem el while infinit fent t!=0, i deixem constancia al Log 
+      t=1
+      echo -e "\n\n   ATENCION: PROCESO PARADO POR DISCO $partic LLENO !!! \n   La particion $partic esta ya al $porcient %\n" >> CheckSeedlink_$net.log
+   else
+# si tot va be seguim deixant constancia de la ocupacio actual al log
+      echo -e "\n   - La particion $partic esta actualmente al $porcient %  -->  Seguimos\n" >> CheckSeedlink_$net.log
+   fi
+
+# Adormo l'script un temps determinat i despres fa un altre volta
+  sleep $time
+done
+
