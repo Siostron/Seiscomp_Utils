@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# MRF 24-07-2014  --> 20-05-2025
+#  --    Script invocat per scalert quan declara un nou event.   --
+#
+# 22-10-2020 - Adapto a SeiscomP-4-5-6
+# 12-03-2021 - Faig que faci un png amb el mapa del epicentre - scmapcut
+# 15-04-2025 - Canvio algunes coses per a poder fer el pdf del Telegram
+#              que deixen de funcionar al migrar de ubuntu 22.04 a 24.04
+#
+# Cal declarar aquest script a:
+# ~/seiscomp3/etc/scalert.cfg
+#
+# Specify the script to be called when an event has been declared; the message
+# string, a flag (1=new event, 0=update event), the EventID, the arrival count
+# and the magnitude (optional when set) are passed as parameter $1, $2, $3, $4
+# and $5.
+# scripts.event = /home/sysop/.seiscomp/Event_mail.job
+
+Message=$1
+flag=$2
+ident=$3
+arriv=$4
+Mag=$5
+
+# Genero el text del Mail amb l'alerta de scalert i ho complemento amb scbulletin i scmapcut
+
+echo -e  "A new event has been declared:\n\n$Message " > text.lst
+echo "" >> text.lst
+echo -e  "\n     ---  THIS IS AN AUTOMATED MESSAGE - DO NOT REPLY  ---\n" >> text.lst
+
+echo -e "\n  Event Summary :\n\n  ------------------------------------------------------------------------------------\n" >> text.lst
+
+scbulletin -d mysql://sysop:sysop@localhost/seiscomp -1 -E $ident > event.raw
+head event.raw -n 7 >> text.lst
+tail event.raw -n 6 >> text.lst
+
+# miro la distancia a estacio mes propera
+delta=`awk '{if (NR==9) printf("%d\n",$8)}' event.raw`
+
+echo -e "\n  Event Location :\n\n  ------------------------------------------------------------------------------------\n" >> text.lst
+
+scbulletin -d mysql://sysop:sysop@localhost/seiscomp -3 -x -E $ident | awk '{if ($1=="Author") print $0}' >> text.lst
+echo "" >> text.lst
+scbulletin -d mysql://sysop:sysop@localhost/seiscomp -3 -e -E $ident >> text.lst
+
+# Fico un link a googlemaps amb coordenades epicentre
+
+echo "Epicenter location (on GoogleMaps): " >> text.lst
+
+awk '{if ($1=="Latitude") {lat=$2};if ($1=="Longitude") {lon=$2};} END {printf ("https://www.google.com/maps/search/%7.4f,%08.4f\n",lat,lon)}' text.lst >> text.lst
+
+echo "" >> text.lst
+echo -e  "\n  --- More Information: mruiz@geo3bcn.csic.es ----">> text.lst
+
+# preparo png mapa zona epicentral diferenciant 2 casos: Event Local o Event Regional-Tele
+# necesito el xml de l'event
+
+scxmldump -d mysql://sysop:sysop@localhost/seiscomp -fap -E $ident -o $ident.xml
+
+if [ $delta -gt 1 ]
+then
+  m="15.0"
+  d="600x400"
+else
+  m="1.0"
+  d="500x350"
+fi
+
+scmapcut -E $ident --ep $ident.xml -m $m -d $d -o $ident.png
+
+# envio el mail amb el text i el mapa preparat
+# Email amb mapa al telefon - pesa molt i els esborro un cop llegits
+# - A Finals de Desembre de 2023, el gmail  ja no deixa entra correus generats
+# amb postfix - mailutils - Nova Politica Anti-Spam.
+# Intento que surtin amb el smtpin.csic.es:587, sense massa exit.
+# mail -s 'New Event: '$ident'' -A $ident.png < text.lst mruizfernandez@gmail.com 
+
+# envio el text de localitzacio i la imatge via Telegram al telefon - Alternativa Gmail
+#telegram-send --file text.lst --caption "$ident"
+#telegram-send --image $ident.png --caption "$ident"
+#telegram-send --location 41.35 -2.75
+#cat text.lst | telegram-send --stdin --image $ident.png --caption "$ident"
+#telegram-send --format markdown "*$ident*"
+
+#Converteixo el text a pdf
+#cupsfilter ./text.lst > ./$ident.pdf
+enscript ./text.lst -B -o - | ps2pdf - ./$ident.pdf
+telegram-send --file $ident.pdf --image $ident.png --caption "_Event:_ *$ident*" --format markdown
+
+#Envio tambe mapagoogle
+awk '{if ($1=="Latitude") {lat=$2};if ($1=="Longitude") {lon=$2};} END {printf ("https://www.google.com/maps/search/%7.4f,%08.4f\n",lat,lon)}' text.lst | telegram-send --stdin --disable-web-page-preview
+
+# mail sense mapa mail csic, aixi son menys pesats
+mail -s 'New Event: '$ident'' < text.lst mruiz@geo3bcn.csic.es, sarevalo@geo3bcn.csic.es
+
+rm text.lst event.raw $ident.xml $ident.png $ident.pdf
+
