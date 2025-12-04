@@ -5,7 +5,7 @@ Bash and Python scrips around Seiscomp
 
   Python script to create a xml Inventory from station Response files using Obspy (https://github.com/obspy/obspy/wiki/) and Inventory (https://github.com/SeismicData/pyasdf/blob/master/pyasdf/inventory_utils.py) Utils.
 
-  Station coordinates and recordins start and end dates are givent in a csv file like:
+  Station coordinates and recording start and end dates are given in a csv file looking like:
 
     #station;lat;lon;height;install;uninstall
     BJN1;42.348837;-2.105215;25.1;2021-269T09:28:16.4100;2022-269T11:12:31.1300
