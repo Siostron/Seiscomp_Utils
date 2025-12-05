@@ -1,18 +1,6 @@
 # Seiscomp_Utils
 Bash and Python scrips around Seiscomp
 
-- ## CreateInventory/Inventory_date_hour.py
-
-  Python script to create a xml Inventory from station Response files using Obspy (https://github.com/obspy/obspy/wiki/) and Inventory (https://github.com/SeismicData/pyasdf/blob/master/pyasdf/inventory_utils.py) Utils.
-
-  Station coordinates and recording start and end dates are given in a csv file looking like:
-
-  ```
-  #station;lat;lon;height;install;uninstall
-  BJN1;42.348837;-2.105215;25.1;2021-269T09:28:16.4100;2022-269T11:12:31.1300
-  BJN2;42.368469;-2.115131;37.0;2021-269T07:27:09.4100;2022-269T09:00:34.7700
-  ```
-
 
 - ## eventAlert/Event_mail.job :
 
@@ -41,4 +29,42 @@ Bash and Python scrips around Seiscomp
 
 
    <img width="1069" height="859" alt="Seedlink Alert email and telegram" src="https://github.com/user-attachments/assets/3115c7d5-79e8-40ea-856f-5b8bf184c27b" />
+
+- ## Playback scripts
+
+  Bash and Python Opspy scripts to preapre continous mseed data to run a Real-Time playback in a Non-Prduction Seiscomp server injecting data with *msrtsimul* in historic mode (https://www.seiscomp.de/doc/base/tutorials/waveformplayback.html)
+  
+- ###  Playback/Descarrega_CanviaBlockSize.py
+
+  First, we retrieve all the data to analize with a Python script usyng Obspy (https://github.com/obspy/obspy/wiki/). We download them using the fdsnws from our Production Seiscomp server. We build 2 mseeds files per day, one from 0-12h and the other 12-24h. This is to avoid problems with large files, as ObsPy can currently not directly read mini-SEED files that are larger than 2^31 bytes (2048 MiB). Data is repacked to 512 bytes.
+
+  
+- ###  Playback/scmssort.job
+
+  Secondly, we sort the downloaded data by end time using *scmssort  -u -E* in a bash script. This way multiplexed data is flowing into the system as in real time.
+
+  
+- ###  Playback/Playback_via_script.job
+
+  At the end we are ready to run the playback itself. With this Bash script we play all the sorted mseed with ``msrtsimul -v -s 10.0 -m historic`` command (https://www.seiscomp.de/doc/apps/msrtsimul.html#msrtsimul) at speed 10 time higher than natural flow. 10 days are processed in a day.
+
+  Procedure:
+
+  ```
+  ./Descarrega_CanviaBlockSize.py
+  ./scmssort.job
+  ./Playback_via_script.job
+  ```
+
+- ## CreateInventory/Inventory_date_hour.py
+
+  Python script to create a xml Inventory from station Response files using Obspy (https://github.com/obspy/obspy/wiki/) and Inventory (https://github.com/SeismicData/pyasdf/blob/master/pyasdf/inventory_utils.py) Utils.
+
+  Station coordinates and recording start and end dates are given in a csv file looking like:
+
+  ```
+  #station;lat;lon;height;install;uninstall
+  BJN1;42.348837;-2.105215;25.1;2021-269T09:28:16.4100;2022-269T11:12:31.1300
+  BJN2;42.368469;-2.115131;37.0;2021-269T07:27:09.4100;2022-269T09:00:34.7700
+  ```
 
