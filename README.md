@@ -37,6 +37,7 @@ Bash and Python scrips around Seiscomp
 
 <img width="1069" height="290" alt="Sin nombre" src="https://github.com/user-attachments/assets/446d6254-4ba5-4e31-85fd-9ba5d371bbae" />
 
+
 - **Telegram messages:**
 <img width="200" height="400" alt="Telegram" src="https://github.com/user-attachments/assets/4acaa994-d368-40c2-b9c1-eab241d291d6" />
 
