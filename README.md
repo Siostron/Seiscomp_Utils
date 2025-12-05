@@ -1,7 +1,7 @@
 # Seiscomp_Utils
 Bash and Python scrips around Seiscomp
 
-- ## Alert Scripts
+- ## **Alert Scripts:**
 
 - ### eventAlert/Event_mail.job :
 
@@ -31,7 +31,7 @@ Bash and Python scrips around Seiscomp
 
    <img width="1069" height="859" alt="Seedlink Alert email and telegram" src="https://github.com/user-attachments/assets/3115c7d5-79e8-40ea-856f-5b8bf184c27b" />
 
-- ## Playback scripts
+- ## **Playback scripts:**
 
   Bash and Python Opspy scripts to preapre continous mseed data to run a Real-Time playback in a Non-Prduction Seiscomp server injecting data with *msrtsimul* in historic mode (https://www.seiscomp.de/doc/base/tutorials/waveformplayback.html)
   
