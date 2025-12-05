@@ -18,6 +18,7 @@ Bash and Python scrips around Seiscomp
 
   Bash script called from Seiscomp *scalert* when a new event is declared. It uses *scbulletin*, *scxmldump* and *scmapcut* (https://www.seiscomp.de/) to create a bulletin and an image map to be attached to an email and a Telegram messages. Linux mailutils and telegram-send utils (https://github.com/rahiel/telegram-send) must be installed and configured.
   
+  
   <img width="867" height="908" alt="Event alert Email and Telegram" src="https://github.com/user-attachments/assets/c90126ad-4bab-4b0d-a0a4-478a16dbccd5" />
 
 
@@ -27,6 +28,7 @@ Bash and Python scrips around Seiscomp
 
     Ex:  `` > ./check_seedlink_problems.job YH >& ./Trash/seedlink_check_YH.log &``
   
+
    <img width="920" height="631" alt="Seedlink Alert email and telegram" src="https://github.com/user-attachments/assets/2d034b4e-44f6-4d21-855d-5df065145c70" />
 
  
@@ -37,5 +39,6 @@ Bash and Python scrips around Seiscomp
 
     Ex: `` > ./check_seedlink_problems_station.job CA ICJA >& ./Trash/seedlink_check_CA_ICJA.log &``
 
-  <img width="1069" height="859" alt="Seedlink Alert email and telegram" src="https://github.com/user-attachments/assets/3115c7d5-79e8-40ea-856f-5b8bf184c27b" />
+
+   <img width="1069" height="859" alt="Seedlink Alert email and telegram" src="https://github.com/user-attachments/assets/3115c7d5-79e8-40ea-856f-5b8bf184c27b" />
 
