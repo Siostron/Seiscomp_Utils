@@ -7,11 +7,11 @@ Bash and Python scrips around Seiscomp
 
   Station coordinates and recording start and end dates are given in a csv file looking like:
 
-    #station;lat;lon;height;install;uninstall
+    /#station;lat;lon;height;install;uninstall
   
     BJN1;42.348837;-2.105215;25.1;2021-269T09:28:16.4100;2022-269T11:12:31.1300
   
-    BJN2;42.368469;-2.115131;37.0;2021-269T07:27:09.4100;2022-269T09:00:34.7700
+    BJN2;42.368469;-2.115131;37.0;2021-269T07:27:09.4100;2022-269T09:00:34.7700/
 
 
 - # eventAlert/Event_mail.job :
