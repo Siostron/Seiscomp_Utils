@@ -26,6 +26,8 @@ Bash and Python scrips around Seiscomp
     Ex:  `` > ./check_seedlink_problems.job YH >& ./Trash/seedlink_check_YH.log &``
   
   <img width="1072" height="1117" alt="Sin nombre" src="https://github.com/user-attachments/assets/9e854d4a-309c-4fc1-81a1-d33ed8ff731d" />
+  ![1000123854](https://github.com/user-attachments/assets/1390f637-813d-43f8-95b5-36a863aff76a)
+
 
 
 - ## seedlink/check_seedlink_problems_station.job :
@@ -34,6 +36,7 @@ Bash and Python scrips around Seiscomp
 
     Ex: `` > ./check_seedlink_problems_station.job CA ICJA >& ./Trash/seedlink_check_CA_ICJA.log &``
 
-<img width="1069" height="290" alt="Sin nombre" src="https://github.com/user-attachments/assets/446d6254-4ba5-4e31-85fd-9ba5d371bbae" />
+<img width="1069" height="290" alt="Sin nombre" src="https://github.com/user-attachments/assets/446d6254-4ba5-4e31-85fd-9ba5d371bbae" />![1000123854](https://github.com/user-attachments/assets/890bc4bb-d1f5-483b-bde2-8ae4c21973b8)
+
 
 
