@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# ----------------------------------------------------------------------------------
+#          MRF - Octubre 2024 - Novembre 2025
+#
+#  Sorts the downloaded data by end time
+# ----------------------------------------------------------------------------------
+
+cd /home/sysop/Data_playback
+
+for file in blck512_2025.???.?? 
+do
+ echo "$file ----> sort_$file"
+ echo "-------------------------------------------------------------"
+ date 
+ scmssort -u -E -v $file > sorted_$file
+
+ if [ -f sorted_$file ]; then
+   echo "File sorted_$file exists."
+   ls -al $file sorted_$file
+   rm -v $file
+ else
+   echo "Warning file sorted_$file does not exist."
+   echo "   Check $file ..."
+ fi
+
+echo "-------------------------------------------------------------"
+done
+
+cd /home/sysop
