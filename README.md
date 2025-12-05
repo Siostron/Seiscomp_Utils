@@ -29,5 +29,6 @@ Bash and Python scrips around Seiscomp
 
     Ex: ./check_seedlink_problems_station.job CA ICJA >& ./Trash/seedlink_check_CA_ICJA.log &
 
-<img width="1088" height="295" alt="Sin nombre" src="https://github.com/user-attachments/assets/5d4be5cd-5644-4ee9-a71b-17965d815ff7" />
+<img width="1069" height="290" alt="Sin nombre" src="https://github.com/user-attachments/assets/446d6254-4ba5-4e31-85fd-9ba5d371bbae" />
+
 
