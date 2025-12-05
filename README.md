@@ -21,7 +21,10 @@ Bash and Python scrips around Seiscomp
 
   Bash script to look for seedlink problems in a network of seismic stations received by a Seiscomp Server. It sends an alert by email and Telegram if a configurable Time delay is overpassed by one or more stations. Another message is sent if the problem is solved in one or more stations. *slinktool* (https://github.com/EarthScope/slinktool), Linux mailutils and telegram-send utils (https://github.com/rahiel/telegram-send) must be installed and configured. It is advisable to run this script on a different computer than the Seiscomp server.
 
-    Ex:  ./check_seedlink_problems.job CA >& ./Trash/seedlink_check_CA.log &
+    Ex:  ./check_seedlink_problems.job YH >& ./Trash/seedlink_check_YH.log &
+  
+  <img width="1072" height="1117" alt="Sin nombre" src="https://github.com/user-attachments/assets/9e854d4a-309c-4fc1-81a1-d33ed8ff731d" />
+
 
 - # seedlink/check_seedlink_problems_station.job :
 
