@@ -5,7 +5,7 @@ Bash and Python scrips around Seiscomp
 
 - ### eventAlert/Event_mail.job :
 
-  Bash script called from Seiscomp *scalert* when a new event is declared. It uses *scbulletin*, *scxmldump* and *scmapcut* (https://www.seiscomp.de/) to create a bulletin and an image map to be attached to an email and a Telegram messages. Linux *mailutils* and *telegram-send* utils (https://github.com/rahiel/telegram-send) must be installed and configured.
+  Bash script called by Seiscomp *scalert* when a new event is declared. It uses *scbulletin*, *scxmldump* and *scmapcut* (https://www.seiscomp.de/) to create a bulletin and an image map to be attached to an email and a Telegram messages. Linux *mailutils* and *telegram-send* utils (https://github.com/rahiel/telegram-send) must be installed and configured.
   
   
   <img width="867" height="908" alt="Event alert Email and Telegram" src="https://github.com/user-attachments/assets/c90126ad-4bab-4b0d-a0a4-478a16dbccd5" />
